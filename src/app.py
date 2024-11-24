@@ -21,13 +21,15 @@ def display_board(board, disabled_buttons):
     symbols = {1: "X", -1: "O", 0: " "}
     board_display = [[symbols[cell] for cell in row] for row in board]
     
+    # Create columns once
+    cols = st.columns(3)  # Create the columns outside the loop
+    
     for i, row in enumerate(board_display):
-        cols = st.columns(3)
         for j, cell in enumerate(row):
             idx = i * 3 + j
-            # Disable button if the game is done or the cell is filled
+            unique_key = f"{i}-{j}-{idx}-{str(np.random.randint(1000000))}"  # Ensure unique key
             disabled = disabled_buttons[idx] or st.session_state["done"]
-            if cols[j].button(f"{cell}", key=idx, disabled=disabled):
+            if cols[j].button(f"{cell}", key=unique_key, disabled=disabled):
                 return idx  # Return the index of the button clicked
     return None
 
