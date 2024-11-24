@@ -37,7 +37,7 @@ def display_board(board, disabled_buttons):
 def player_move():
     invalid_move = False
     disabled_buttons = [False] * 9
-    action = None
+    action = None 
 
     if st.session_state["done"]:
         return None, disabled_buttons
