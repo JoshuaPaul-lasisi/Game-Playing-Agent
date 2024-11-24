@@ -10,11 +10,26 @@ st.title("Tic-Tac-Toe RL Agent")
 env = TicTacToeEnv()
 agent = QLearningAgent()  # Use your trained agent here if you have one
 
-# Initialize game state in Streamlit session state
+# Initialize session state for game and scores
 if "state" not in st.session_state:
     st.session_state["state"] = env.reset()
     st.session_state["done"] = False
     st.session_state["invalid_move"] = False  # Track invalid moves
+    st.session_state["player_score"] = 0
+    st.session_state["agent_score"] = 0
+    st.session_state["disabled_buttons"] = [False] * 9  # Track disabled buttons for each square
+
+# Reset button to reset the game and scores
+if st.button("Reset Scores"):
+    st.session_state["player_score"] = 0
+    st.session_state["agent_score"] = 0
+    st.session_state["state"] = env.reset()  # Reset the game state
+    st.session_state["done"] = False
+    st.session_state["disabled_buttons"] = [False] * 9  # Reset disabled buttons
+
+# Display Scores
+st.write(f"Player (X) Score: {st.session_state['player_score']}")
+st.write(f"Agent (O) Score: {st.session_state['agent_score']}")
 
 # Display Board
 def display_board(board, disabled_buttons):
@@ -36,8 +51,7 @@ def display_board(board, disabled_buttons):
 # Player Move
 def player_move():
     invalid_move = False
-    disabled_buttons = [False] * 9
-    action = None 
+    disabled_buttons = st.session_state["disabled_buttons"]  # Track disabled buttons
 
     if st.session_state["done"]:
         return None, disabled_buttons
@@ -48,28 +62,41 @@ def player_move():
     action = display_board(st.session_state["state"], disabled_buttons)
     if action is not None:
         row, col = divmod(action, 3)
-        _, reward, done = env.step(action, -1)  # Player is "O"
+        _, reward, done = env.step(action, -1)  # Player is "X"
         st.session_state["done"] = done
         if reward == -10:  # Invalid move penalty
             invalid_move = True
         disabled_buttons[action] = True  # Disable button after it's pressed
     
+    # Update the disabled buttons in session state
+    st.session_state["disabled_buttons"] = disabled_buttons
     return invalid_move, disabled_buttons
 
 # Agent Move
 def agent_move():
     if not st.session_state["done"]:
         agent_action = agent.select_action(st.session_state["state"])
-        _, _, st.session_state["done"] = env.step(agent_action, 1)  # Agent is "X"
+        _, _, st.session_state["done"] = env.step(agent_action, 1)  # Agent is "O"
         st.session_state["state"] = env.board
+        # Disable the agent's selected button
+        idx = agent_action
+        st.session_state["disabled_buttons"][idx] = True
+
+# Update Scores
+def update_scores():
+    if st.session_state["done"]:
+        if env.winner == 1:
+            st.session_state["player_score"] += 1
+        elif env.winner == -1:
+            st.session_state["agent_score"] += 1
 
 # Display winner message
 def display_winner():
     if st.session_state["done"]:
         if env.winner == 1:
-            st.write("Agent Wins!")
+            st.write("Player Wins!")
         elif env.winner == -1:
-            st.write("You Win!")
+            st.write("Agent Wins!")
         else:
             st.write("It's a Draw!")
 
@@ -80,13 +107,16 @@ invalid_move, disabled_buttons = player_move()
 if invalid_move:
     st.error("Invalid move! Please choose a different spot.")
 
-# Perform agent's move
+# Perform agent's move if the game isn't over
 if not st.session_state["done"]:
     agent_move()
 
+# Update the scores after each round
+update_scores()
+
 # Display the board again with the current state
 st.header("Tic-Tac-Toe Board")
-display_board(st.session_state["state"], disabled_buttons)
+display_board(st.session_state["state"], st.session_state["disabled_buttons"])
 
-# Display the winner
+# Display the winner and final scores
 display_winner()
